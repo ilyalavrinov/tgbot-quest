@@ -20,7 +20,7 @@ func (h *answerHandler) Name() string {
 func (h *answerHandler) HandleOne(msg tgbotapi.Message) {
 	userID := tgbotbase.UserID(msg.From.ID)
 	chatID := msg.Chat.ID
-	log.WithFields(log.Fields{"userID": userID, "userName": msg.From.UserName, "message": msg.Text}).Debug("Incoming message")
+	log.WithFields(log.Fields{"userID": userID, "userName": msg.From.UserName, "message": msg.Text}).Debug("Incoming answer")
 	res := h.engine.CheckAnswer(userID, msg.Text)
 	if !res.correct {
 		h.OutMsgCh <- tgbotapi.NewMessage(chatID, "Ответ неверный!")
@@ -36,7 +36,7 @@ func (h *answerHandler) HandleOne(msg tgbotapi.Message) {
 
 func (h *answerHandler) Init(outCh chan<- tgbotapi.Chattable, srvCh chan<- tgbotbase.ServiceMsg) tgbotbase.HandlerTrigger {
 	h.OutMsgCh = outCh
-	return tgbotbase.NewHandlerTrigger(regexp.MustCompile("*"), nil)
+	return tgbotbase.NewHandlerTrigger(regexp.MustCompile("^[^/].*"), nil)
 }
 
 func NewAnswerHandler(engine QuestEngine) tgbotbase.IncomingMessageHandler {
