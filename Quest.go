@@ -34,3 +34,7 @@ func (q Quest) CheckAnswer(answer string, state State) (newState *State) {
 	}
 	return
 }
+
+func (q Quest) CreateInitialState() State {
+	return State{stageIx: 0}
+}
