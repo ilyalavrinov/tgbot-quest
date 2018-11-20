@@ -1,0 +1,11 @@
+[tgbot]
+token = <PLACE YOUR TOKEN HERE>
+
+[proxy-socks5]
+server = 127.0.0.1:8081
+user = ilyalavrinov
+pass = ilyalavrinov
+
+[redis]
+server = localhost:6379
+pass = thisismypassw0rd
