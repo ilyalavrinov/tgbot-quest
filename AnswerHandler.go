@@ -9,6 +9,7 @@ import (
 
 type answerHandler struct {
 	tgbotbase.BaseHandler
+	engine QuestEngine
 }
 
 func (h *answerHandler) Name() string {
@@ -24,6 +25,6 @@ func (h *answerHandler) Init(outCh chan<- tgbotapi.Chattable, srvCh chan<- tgbot
 	return tgbotbase.NewHandlerTrigger(regexp.MustCompile("*"), nil)
 }
 
-func NewAnswerHandler() tgbotbase.IncomingMessageHandler {
-	return &answerHandler{}
+func NewAnswerHandler(engine QuestEngine) tgbotbase.IncomingMessageHandler {
+	return &answerHandler{engine: engine}
 }

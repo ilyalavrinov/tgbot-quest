@@ -12,7 +12,7 @@ type Stage struct {
 func NewStage(question string, answers []string) Stage {
 	s := Stage{question: question}
 	for _, a := range answers {
-		s.answers[a] = true
+		s.answers[strings.ToLower(a)] = true
 	}
 	return s
 }

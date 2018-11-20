@@ -33,7 +33,18 @@ func main() {
 
 	//pool := tgbotbase.NewRedisPool(cfg.Redis)
 
-	tgbot.AddHandler(tgbotbase.NewIncomingMessageDealer(NewAnswerHandler()))
+	engine := &questEngine{}
+
+	q1 := Quest{}
+	q1.stages = append(q1.stages, NewStage("Как зовут моего хозяина?", []string{"илья", "ilya"}))
+	q1.stages = append(q1.stages, NewStage("What year is it?", []string{"2018"}))
+	engine.quests["test"] = q1
+
+	q2 := Quest{}
+	q2.stages = append(q2.stages, NewStage("Быть или не быть?", []string{"быть", "не быть"}))
+	engine.quests["test2"] = q2
+
+	tgbot.AddHandler(tgbotbase.NewIncomingMessageDealer(NewAnswerHandler(engine)))
 
 	tgbot.Start()
 
