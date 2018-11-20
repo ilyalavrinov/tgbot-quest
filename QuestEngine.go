@@ -18,6 +18,7 @@ type QuestEngine interface {
 	StartQuest(userID tgbotbase.UserID, questID string) error
 	CheckAnswer(userID tgbotbase.UserID, answer string) AnswerResult
 	GetCurrentQuestion(userID tgbotbase.UserID) tgbotapi.Chattable
+	AddQuest(questID string, quest Quest)
 }
 
 type activeUserQuest struct {
@@ -32,6 +33,13 @@ type questEngine struct {
 }
 
 var _ QuestEngine = &questEngine{}
+
+func NewQuestEngine() QuestEngine {
+	engine := &questEngine{
+		quests:       make(map[string]Quest, 0),
+		activeQuests: make(map[tgbotbase.UserID]activeUserQuest, 0)}
+	return engine
+}
 
 func (q *questEngine) StartQuest(userID tgbotbase.UserID, questID string) error {
 	quest, found := q.quests[questID]
@@ -85,4 +93,8 @@ func (q *questEngine) GetCurrentQuestion(userID tgbotbase.UserID) tgbotapi.Chatt
 		return tgbotapi.NewMessage(int64(userID), "You do not have any active quest :(")
 	}
 	return tgbotapi.NewMessage(int64(userID), questData.quest.GetQuestion(questData.state))
+}
+
+func (q *questEngine) AddQuest(questID string, quest Quest) {
+	q.quests[questID] = quest
 }

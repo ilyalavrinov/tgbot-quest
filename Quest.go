@@ -10,7 +10,9 @@ type Stage struct {
 }
 
 func NewStage(question string, answers []string) Stage {
-	s := Stage{question: question}
+	s := Stage{
+		question: question,
+		answers:  make(map[string]bool, len(answers))}
 	for _, a := range answers {
 		s.answers[strings.ToLower(a)] = true
 	}
