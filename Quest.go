@@ -37,13 +37,17 @@ func (q Quest) CheckAnswer(answer string, state State) (newState *State) {
 	answer = strings.ToLower(answer)
 
 	if _, found := stage.answers[answer]; found {
-		newState = &State{stageIx: state.stageIx + 1}
+		newState = &State{}
+		*newState = state
+		newState.stageIx++
 	}
 	return
 }
 
 func (q Quest) CreateInitialState() State {
-	return State{stageIx: 0}
+	return State{
+		stageIx:  0,
+		stageLen: len(q.stages)}
 }
 
 func (q Quest) GetQuestion(state State) string {
