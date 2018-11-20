@@ -22,7 +22,12 @@ type Quest struct {
 }
 
 type State struct {
-	stageIx int
+	stageIx  int
+	stageLen int
+}
+
+func (s State) IsFinished() bool {
+	return s.stageIx >= s.stageLen
 }
 
 func (q Quest) CheckAnswer(answer string, state State) (newState *State) {
@@ -37,4 +42,8 @@ func (q Quest) CheckAnswer(answer string, state State) (newState *State) {
 
 func (q Quest) CreateInitialState() State {
 	return State{stageIx: 0}
+}
+
+func (q Quest) GetQuestion(state State) string {
+	return q.stages[state.stageIx].question
 }
