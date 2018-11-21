@@ -30,6 +30,7 @@ func readGcfg(filename string) config {
 }
 
 func main() {
+	log.SetLevel(log.DebugLevel)
 	log.Info("Starting daily budget bot")
 
 	cfg := readGcfg("bot.cfg")
