@@ -9,6 +9,7 @@ import (
 type Stage struct {
 	question string
 	answers  map[string]bool
+	pic      []byte
 }
 
 func NewStage(question string, answers []string) Stage {
@@ -19,6 +20,10 @@ func NewStage(question string, answers []string) Stage {
 		s.answers[strings.ToLower(a)] = true
 	}
 	return s
+}
+
+func (s *Stage) AddPicture(pic []byte) {
+	s.pic = pic
 }
 
 type Quest struct {
@@ -80,4 +85,8 @@ func (q Quest) CreateInitialState() State {
 
 func (q Quest) GetQuestion(state State) string {
 	return q.stages[state.GetStageID()].question
+}
+
+func (q Quest) GetPicture(state State) []byte {
+	return q.stages[state.GetStageID()].pic
 }

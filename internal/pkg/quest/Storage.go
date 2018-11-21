@@ -57,6 +57,14 @@ func (s *redisQuestStorage) StoreStage(questID string, rec StageRecord) error {
 	if err != nil {
 		return err
 	}
+
+	if rec.stage.pic != nil {
+		err = s.client.HSet(redisQuestion(stageKey), "pic", rec.stage.pic).Err()
+		if err != nil {
+			return err
+		}
+	}
+
 	answers := make([]string, 0, len(rec.stage.answers))
 	for a, _ := range rec.stage.answers {
 		answers = append(answers, a)
@@ -130,6 +138,10 @@ func (s *redisQuestStorage) LoadStage(questID, stageID string) (*Stage, error) {
 	}
 
 	stage := NewStage(qtext, answers)
+	if pic, found := fields["pic"]; found {
+		stage.AddPicture([]byte(pic))
+	}
+
 	return &stage, nil
 }
 

@@ -3,7 +3,6 @@ package quest
 import (
 	"errors"
 	"fmt"
-
 	"github.com/admirallarimda/tgbotbase"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/telegram-bot-api.v4"
@@ -114,7 +113,18 @@ func (q *questEngine) GetCurrentQuestion(userID tgbotbase.UserID) tgbotapi.Chatt
 		log.WithFields(log.Fields{"user": userID}).Warn("Active quest not found on getting current question")
 		return tgbotapi.NewMessage(int64(userID), "You do not have any active quest :(")
 	}
-	return tgbotapi.NewMessage(int64(userID), questData.quest.GetQuestion(questData.state))
+
+	pic := questData.quest.GetPicture(questData.state)
+	text := questData.quest.GetQuestion(questData.state)
+	if pic != nil {
+		buf := tgbotapi.FileBytes{
+			Name:  "TODO_put_some_name_here",
+			Bytes: pic}
+		msg := tgbotapi.NewPhotoUpload(int64(userID), buf)
+		msg.Caption = text
+		return msg
+	}
+	return tgbotapi.NewMessage(int64(userID), text)
 }
 
 func (q *questEngine) AddQuest(questID string, quest Quest) {
