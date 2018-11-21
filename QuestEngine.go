@@ -11,6 +11,7 @@ import (
 )
 
 type AnswerResult struct {
+	active   bool
 	correct  bool
 	finished bool
 }
@@ -75,6 +76,7 @@ func (q *questEngine) CheckAnswer(userID tgbotbase.UserID, answer string) Answer
 	if !found {
 		log.WithFields(log.Fields{"user": userID}).Warn("Active quest not found on checking answer")
 		return AnswerResult{
+			active:   false,
 			correct:  false,
 			finished: false}
 	}
@@ -83,12 +85,12 @@ func (q *questEngine) CheckAnswer(userID tgbotbase.UserID, answer string) Answer
 	if newState == nil {
 		log.WithFields(log.Fields{"user": userID, "answer": answer}).Debug("Incorrect answer")
 		return AnswerResult{
+			active:   true,
 			correct:  false,
 			finished: false}
 	}
 
 	log.WithFields(log.Fields{"user": userID, "answer": answer}).Debug("Correct answer")
-	correct := true
 	finished := false
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
@@ -100,7 +102,7 @@ func (q *questEngine) CheckAnswer(userID tgbotbase.UserID, answer string) Answer
 			quest: questData.quest,
 			state: *newState}
 	}
-	return AnswerResult{correct: correct, finished: finished}
+	return AnswerResult{active: true, correct: true, finished: finished}
 
 }
 

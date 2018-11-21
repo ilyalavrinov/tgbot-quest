@@ -20,8 +20,14 @@ func (h *answerHandler) Name() string {
 func (h *answerHandler) HandleOne(msg tgbotapi.Message) {
 	userID := tgbotbase.UserID(msg.From.ID)
 	chatID := msg.Chat.ID
-	log.WithFields(log.Fields{"userID": userID, "userName": msg.From.UserName, "message": msg.Text}).Debug("Incoming answer")
+	logger := log.WithFields(log.Fields{"userID": userID, "userName": msg.From.UserName, "message": msg.Text})
+	logger.Debug("Incoming answer")
 	res := h.engine.CheckAnswer(userID, msg.Text)
+	if !res.active {
+		logger.Debug("No active quests, skipping")
+		return
+	}
+
 	if !res.correct {
 		h.OutMsgCh <- tgbotapi.NewMessage(chatID, "Ответ неверный!")
 	} else {
