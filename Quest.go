@@ -1,6 +1,7 @@
 package main
 
 import (
+	"sort"
 	"strings"
 )
 
@@ -20,36 +21,53 @@ func NewStage(question string, answers []string) Stage {
 }
 
 type Quest struct {
-	stages []Stage
+	stages map[string]Stage
+}
+
+func NewQuest() Quest {
+	return Quest{stages: make(map[string]Stage, 0)}
 }
 
 type State struct {
-	stageIx  int
-	stageLen int
+	stageIx    int
+	stageOrder []string
 }
 
 func (s State) IsFinished() bool {
-	return s.stageIx >= s.stageLen
+	return s.stageIx >= len(s.stageOrder)
+}
+
+func (s State) GetStageID() string {
+	return s.stageOrder[s.stageIx]
+}
+
+func (s State) Next() *State {
+	s2 := s
+	s2.stageIx++
+	return &s2
 }
 
 func (q Quest) CheckAnswer(answer string, state State) (newState *State) {
-	stage := q.stages[state.stageIx]
+	stage := q.stages[state.GetStageID()]
 	answer = strings.ToLower(answer)
 
 	if _, found := stage.answers[answer]; found {
-		newState = &State{}
-		*newState = state
-		newState.stageIx++
+		newState = state.Next()
 	}
 	return
 }
 
 func (q Quest) CreateInitialState() State {
+	order := make([]string, 0, len(q.stages))
+	for k, _ := range q.stages {
+		order = append(order, k)
+	}
+	sort.Strings(order)
 	return State{
-		stageIx:  0,
-		stageLen: len(q.stages)}
+		stageIx:    0,
+		stageOrder: order}
 }
 
 func (q Quest) GetQuestion(state State) string {
-	return q.stages[state.stageIx].question
+	return q.stages[state.GetStageID()].question
 }
