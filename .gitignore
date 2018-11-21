@@ -11,4 +11,6 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-bot.cfg
+cmd/tgbot-quest/bot.cfg
+cmd/tgbot-quest/tgbot-quest
+internal/app/questupload/questupload
