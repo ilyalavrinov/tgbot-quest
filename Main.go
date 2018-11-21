@@ -31,19 +31,29 @@ func main() {
 	botCfg := tgbotbase.Config{TGBot: cfg.TGBot, Proxy_SOCKS5: cfg.Proxy_SOCKS5}
 	tgbot := tgbotbase.NewBot(botCfg)
 
-	//pool := tgbotbase.NewRedisPool(cfg.Redis)
+	pool := tgbotbase.NewRedisPool(cfg.Redis)
 
-	engine := NewQuestEngine()
+	engine := NewQuestEngine(pool)
+	/*
+		q1 := NewQuest()
+		q1.stages["a"] = NewStage("Как зовут моего хозяина?", []string{"илья", "ilya"})
+		q1.stages["b"] = NewStage("What year is it?", []string{"2018"})
+		engine.AddQuest("test", q1)
 
-	q1 := NewQuest()
-	q1.stages["a"] = NewStage("Как зовут моего хозяина?", []string{"илья", "ilya"})
-	q1.stages["b"] = NewStage("What year is it?", []string{"2018"})
-	engine.AddQuest("test", q1)
+		q2 := NewQuest()
+		q2.stages["a"] = NewStage("Быть или не быть?", []string{"быть", "не быть"})
+		engine.AddQuest("test2", q2)
+		storage := NewRedisQuestStorage(pool)
 
-	q2 := NewQuest()
-	q2.stages["a"] = NewStage("Быть или не быть?", []string{"быть", "не быть"})
-	engine.AddQuest("test2", q2)
-
+		err := storage.StoreQuest(QuestRecord{"test", q1})
+		if err != nil {
+			panic(err)
+		}
+		err = storage.StoreQuest(QuestRecord{"test2", q2})
+		if err != nil {
+			panic(err)
+		}
+	*/
 	tgbot.AddHandler(tgbotbase.NewIncomingMessageDealer(NewStartHandler(engine)))
 	tgbot.AddHandler(tgbotbase.NewIncomingMessageDealer(NewAnswerHandler(engine)))
 

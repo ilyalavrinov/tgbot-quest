@@ -36,10 +36,20 @@ type questEngine struct {
 
 var _ QuestEngine = &questEngine{}
 
-func NewQuestEngine() QuestEngine {
+func NewQuestEngine(pool tgbotbase.RedisPool) QuestEngine {
 	engine := &questEngine{
 		quests:       make(map[string]Quest, 0),
 		activeQuests: make(map[tgbotbase.UserID]activeUserQuest, 0)}
+	storage := NewRedisQuestStorage(pool)
+	quests, err := storage.LoadAll()
+	if err != nil {
+		panic(err)
+	}
+
+	for _, rec := range quests {
+		log.WithFields(log.Fields{"quest": rec.questID, "stages_n": len(rec.quest.stages)}).Info("Quest loaded")
+		engine.quests[rec.questID] = rec.quest
+	}
 	return engine
 }
 
