@@ -5,7 +5,7 @@ Telegram bot for text-based quests
 This bot is a simple version we're using for one our internal event. It has a pretty limited set of features and I do not have much intention to develop it further.
 
 ## TODO
-* Concurrent QuestEnging
+* ~~Concurrent QuestEnging~~
 * Persistence of quests
 * Random stages
 * Picture support in questions (by pic ID)

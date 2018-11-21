@@ -7,6 +7,7 @@ import (
 	"github.com/admirallarimda/tgbotbase"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/telegram-bot-api.v4"
+	"sync"
 )
 
 type AnswerResult struct {
@@ -30,6 +31,7 @@ type questEngine struct {
 	quests map[string]Quest
 
 	activeQuests map[tgbotbase.UserID]activeUserQuest
+	mutex        sync.Mutex
 }
 
 var _ QuestEngine = &questEngine{}
@@ -42,6 +44,8 @@ func NewQuestEngine() QuestEngine {
 }
 
 func (q *questEngine) StartQuest(userID tgbotbase.UserID, questID string) error {
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
 	quest, found := q.quests[questID]
 	if !found {
 		return errors.New(fmt.Sprintf("Quest '%s' is not registered", questID))
@@ -55,7 +59,9 @@ func (q *questEngine) StartQuest(userID tgbotbase.UserID, questID string) error 
 }
 
 func (q *questEngine) CheckAnswer(userID tgbotbase.UserID, answer string) AnswerResult {
+	q.mutex.Lock()
 	questData, found := q.activeQuests[userID]
+	q.mutex.Unlock()
 	if !found {
 		log.WithFields(log.Fields{"user": userID}).Warn("Active quest not found on checking answer")
 		return AnswerResult{
@@ -74,6 +80,8 @@ func (q *questEngine) CheckAnswer(userID tgbotbase.UserID, answer string) Answer
 	log.WithFields(log.Fields{"user": userID, "answer": answer}).Debug("Correct answer")
 	correct := true
 	finished := false
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
 	if newState.IsFinished() {
 		finished = true
 		delete(q.activeQuests, userID)
@@ -87,7 +95,9 @@ func (q *questEngine) CheckAnswer(userID tgbotbase.UserID, answer string) Answer
 }
 
 func (q *questEngine) GetCurrentQuestion(userID tgbotbase.UserID) tgbotapi.Chattable {
+	q.mutex.Lock()
 	questData, found := q.activeQuests[userID]
+	q.mutex.Unlock()
 	if !found {
 		log.WithFields(log.Fields{"user": userID}).Warn("Active quest not found on getting current question")
 		return tgbotapi.NewMessage(int64(userID), "You do not have any active quest :(")
@@ -96,5 +106,7 @@ func (q *questEngine) GetCurrentQuestion(userID tgbotbase.UserID) tgbotapi.Chatt
 }
 
 func (q *questEngine) AddQuest(questID string, quest Quest) {
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
 	q.quests[questID] = quest
 }
