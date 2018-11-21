@@ -3,6 +3,10 @@ package main
 import "github.com/admirallarimda/tgbotbase"
 import "github.com/go-redis/redis"
 import "fmt"
+import "math"
+import "errors"
+import "strings"
+import log "github.com/sirupsen/logrus"
 
 type QuestRecord struct {
 	questID string
@@ -19,8 +23,8 @@ type QuestStorage interface {
 	StoreStage(questID string, stage StageRecord) error
 
 	LoadAll() ([]QuestRecord, error)
-	LoadQuest(questID string) (Quest, error)
-	LoadStage(questID, stageID string) (Stage, error)
+	LoadQuest(questID string) (*Quest, error)
+	LoadStage(questID, stageID string) (*Stage, error)
 }
 
 type redisQuestStorage struct {
@@ -60,19 +64,80 @@ func (s *redisQuestStorage) StoreStage(questID string, rec StageRecord) error {
 }
 
 func (s *redisQuestStorage) LoadAll() ([]QuestRecord, error) {
-	return nil, nil
+	questKeys, err := tgbotbase.GetAllKeys(s.client, scanQuests())
+	if err != nil {
+		return nil, err
+	}
+	uniqueQuestKeys := make(map[string]bool, len(questKeys))
+	for _, key := range questKeys {
+		parts := strings.Split(key, ":")
+		uniqueQuestKeys[parts[2]] = true
+	}
+	quests := make([]QuestRecord, 0, len(uniqueQuestKeys))
+	for k := range uniqueQuestKeys {
+		quest, err := s.LoadQuest(k)
+		if err != nil {
+			log.WithFields(log.Fields{"quest": k, "error": err}).Warn("Unable to load quest")
+			continue
+		}
+		quests = append(quests, QuestRecord{k, *quest})
+	}
+	return quests, nil
 }
 
-func (s *redisQuestStorage) LoadQuest(questID string) (Quest, error) {
-	return Quest{}, nil
+func (s *redisQuestStorage) LoadQuest(questID string) (*Quest, error) {
+	stageKeys, err := tgbotbase.GetAllKeys(s.client, scanStages(questID))
+	if err != nil {
+		return nil, err
+	}
+	stages := make(map[string]Stage, len(stageKeys))
+	for _, key := range stageKeys {
+		parts := strings.Split(key, ":")
+		stageID := parts[3]
+		stage, err := s.LoadStage(questID, stageID)
+		if err != nil {
+			log.WithFields(log.Fields{"quest": questID, "stage": stageID, "error": err}).Warn("Unable to load stage")
+			return nil, err
+		}
+		stages[stageID] = *stage
+	}
+	return &Quest{stages}, nil
 }
 
-func (s *redisQuestStorage) LoadStage(questID, stageID string) (Stage, error) {
-	return Stage{}, nil
+func (s *redisQuestStorage) LoadStage(questID, stageID string) (*Stage, error) {
+	stageKey := redisStageKey(questID, stageID)
+	fields, err := s.client.HGetAll(redisQuestion(stageKey)).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	qtext, found := fields["text"]
+	if !found {
+		return nil, errors.New("Empty question text")
+	}
+
+	answers, err := s.client.LRange(redisAnswers(stageKey), 0, math.MaxInt64).Result()
+	if err != nil {
+		return nil, err
+	}
+	if len(answers) == 0 {
+		return nil, errors.New("Empty list of answers")
+	}
+
+	stage := NewStage(qtext, answers)
+	return &stage, nil
 }
 
 func redisQuestKey(questID string) string {
 	return fmt.Sprintf("tg:quest:%s", questID)
+}
+
+func scanQuests() string {
+	return "tg:quest:*"
+}
+
+func scanStages(questID string) string {
+	return fmt.Sprintf("tg:quest:%s:*:question", questID)
 }
 
 func redisStageKey(questID string, stageID string) string {
