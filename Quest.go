@@ -1,7 +1,7 @@
 package main
 
 import (
-	"sort"
+	"math/rand"
 	"strings"
 )
 
@@ -62,7 +62,9 @@ func (q Quest) CreateInitialState() State {
 	for k, _ := range q.stages {
 		order = append(order, k)
 	}
-	sort.Strings(order)
+	rand.Shuffle(len(order), func(i, j int) {
+		order[i], order[j] = order[j], order[i]
+	})
 	return State{
 		stageIx:    0,
 		stageOrder: order}

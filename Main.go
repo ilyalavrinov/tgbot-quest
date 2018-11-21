@@ -3,6 +3,8 @@ package main
 import log "github.com/sirupsen/logrus"
 import "gopkg.in/gcfg.v1"
 import "github.com/admirallarimda/tgbotbase"
+import "math/rand"
+import "time"
 
 type config struct {
 	tgbotbase.Config
@@ -31,8 +33,9 @@ func main() {
 	botCfg := tgbotbase.Config{TGBot: cfg.TGBot, Proxy_SOCKS5: cfg.Proxy_SOCKS5}
 	tgbot := tgbotbase.NewBot(botCfg)
 
-	pool := tgbotbase.NewRedisPool(cfg.Redis)
+	rand.Seed(int64(time.Now().Second()))
 
+	pool := tgbotbase.NewRedisPool(cfg.Redis)
 	engine := NewQuestEngine(pool)
 	/*
 		q1 := NewQuest()

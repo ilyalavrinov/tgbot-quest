@@ -7,6 +7,6 @@ This bot is a simple version we're using for one our internal event. It has a pr
 ## TODO
 * ~~Concurrent QuestEnging~~
 * ~~Persistence of quests~~
-* Random stages
+* ~~Random stages~~
 * Picture support in questions (by pic ID)
 * Some sort of stats to determine who is the winner (shortest time between start and end)
