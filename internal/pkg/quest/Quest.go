@@ -1,6 +1,7 @@
 package quest
 
 import (
+	"fmt"
 	"math/rand"
 	"strings"
 )
@@ -26,6 +27,13 @@ type Quest struct {
 
 func NewQuest() Quest {
 	return Quest{stages: make(map[string]Stage, 0)}
+}
+
+func (q *Quest) AddStage(stageID string, stage Stage) {
+	if _, found := q.stages[stageID]; found {
+		panic(fmt.Sprintf("Stage '%s' is already known", stageID))
+	}
+	q.stages[stageID] = stage
 }
 
 type State struct {

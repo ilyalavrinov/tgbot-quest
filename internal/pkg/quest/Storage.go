@@ -13,6 +13,11 @@ type QuestRecord struct {
 	quest   Quest
 }
 
+func NewQuestRecord(questID string, quest Quest) *QuestRecord {
+	return &QuestRecord{
+		questID, quest}
+}
+
 type StageRecord struct {
 	stageID string
 	stage   Stage

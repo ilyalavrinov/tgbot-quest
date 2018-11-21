@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"github.com/admirallarimda/tgbot-quest/internal/pkg/quest"
+	"github.com/admirallarimda/tgbotbase"
 	log "github.com/sirupsen/logrus"
 	"strings"
 	"time"
@@ -20,6 +21,7 @@ func main() {
 	flag.Parse()
 
 	if (*argQuest == "") || (*argQuestion == "") || (*argAnswers == "") {
+		flag.PrintDefaults()
 		log.Panic("One of mandatory arguments is not set")
 	}
 
@@ -30,6 +32,10 @@ func main() {
 	answers := strings.Split(*argAnswers, ";")
 
 	q := quest.NewQuest()
-	q.stages[*argStage] = quest.NewStage(*argQuestion, answers)
+	q.AddStage(*argStage, quest.NewStage(*argQuestion, answers))
 
+	cfg := tgbotbase.RedisConfig{"127.0.0.1:6379", ""}
+	pool := tgbotbase.NewRedisPool(cfg)
+	storage := quest.NewRedisQuestStorage(pool)
+	storage.StoreQuest(*quest.NewQuestRecord(*argQuest, q))
 }
