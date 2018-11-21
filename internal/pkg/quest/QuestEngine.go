@@ -1,4 +1,4 @@
-package main
+package quest
 
 import (
 	"errors"
@@ -11,9 +11,9 @@ import (
 )
 
 type AnswerResult struct {
-	active   bool
-	correct  bool
-	finished bool
+	Active   bool
+	Correct  bool
+	Finished bool
 }
 
 type QuestEngine interface {
@@ -76,18 +76,18 @@ func (q *questEngine) CheckAnswer(userID tgbotbase.UserID, answer string) Answer
 	if !found {
 		log.WithFields(log.Fields{"user": userID}).Warn("Active quest not found on checking answer")
 		return AnswerResult{
-			active:   false,
-			correct:  false,
-			finished: false}
+			Active:   false,
+			Correct:  false,
+			Finished: false}
 	}
 
 	newState := questData.quest.CheckAnswer(answer, questData.state)
 	if newState == nil {
 		log.WithFields(log.Fields{"user": userID, "answer": answer}).Debug("Incorrect answer")
 		return AnswerResult{
-			active:   true,
-			correct:  false,
-			finished: false}
+			Active:   true,
+			Correct:  false,
+			Finished: false}
 	}
 
 	log.WithFields(log.Fields{"user": userID, "answer": answer}).Debug("Correct answer")
@@ -102,7 +102,7 @@ func (q *questEngine) CheckAnswer(userID tgbotbase.UserID, answer string) Answer
 			quest: questData.quest,
 			state: *newState}
 	}
-	return AnswerResult{active: true, correct: true, finished: finished}
+	return AnswerResult{Active: true, Correct: true, Finished: finished}
 
 }
 

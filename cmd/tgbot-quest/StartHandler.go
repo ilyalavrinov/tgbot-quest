@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/admirallarimda/tgbot-quest/internal/pkg/quest"
 	"github.com/admirallarimda/tgbotbase"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/telegram-bot-api.v4"
@@ -10,7 +11,7 @@ import (
 
 type startHandler struct {
 	tgbotbase.BaseHandler
-	engine QuestEngine
+	engine quest.QuestEngine
 }
 
 func (h *startHandler) Name() string {
@@ -35,6 +36,6 @@ func (h *startHandler) Init(outCh chan<- tgbotapi.Chattable, srvCh chan<- tgbotb
 	return tgbotbase.NewHandlerTrigger(nil, []string{"start"})
 }
 
-func NewStartHandler(engine QuestEngine) tgbotbase.IncomingMessageHandler {
+func NewStartHandler(engine quest.QuestEngine) tgbotbase.IncomingMessageHandler {
 	return &startHandler{engine: engine}
 }

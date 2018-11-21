@@ -1,4 +1,4 @@
-package main
+package quest
 
 import (
 	"math/rand"

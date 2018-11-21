@@ -1,10 +1,13 @@
 package main
 
-import log "github.com/sirupsen/logrus"
-import "gopkg.in/gcfg.v1"
-import "github.com/admirallarimda/tgbotbase"
-import "math/rand"
-import "time"
+import (
+	"github.com/admirallarimda/tgbot-quest/internal/pkg/quest"
+	"github.com/admirallarimda/tgbotbase"
+	log "github.com/sirupsen/logrus"
+	"gopkg.in/gcfg.v1"
+	"math/rand"
+	"time"
+)
 
 type config struct {
 	tgbotbase.Config
@@ -36,7 +39,7 @@ func main() {
 	rand.Seed(int64(time.Now().Second()))
 
 	pool := tgbotbase.NewRedisPool(cfg.Redis)
-	engine := NewQuestEngine(pool)
+	engine := quest.NewQuestEngine(pool)
 
 	tgbot.AddHandler(tgbotbase.NewIncomingMessageDealer(NewStartHandler(engine)))
 	tgbot.AddHandler(tgbotbase.NewIncomingMessageDealer(NewAnswerHandler(engine)))

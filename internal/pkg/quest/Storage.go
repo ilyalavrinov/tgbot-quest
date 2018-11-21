@@ -1,4 +1,4 @@
-package main
+package quest
 
 import "github.com/admirallarimda/tgbotbase"
 import "github.com/go-redis/redis"
