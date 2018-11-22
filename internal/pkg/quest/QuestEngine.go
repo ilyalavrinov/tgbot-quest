@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/telegram-bot-api.v4"
 	"sync"
+	"time"
 )
 
 type AnswerResult struct {
@@ -23,8 +24,9 @@ type QuestEngine interface {
 }
 
 type activeUserQuest struct {
-	quest Quest
-	state State
+	questID string
+	quest   Quest
+	state   State
 }
 
 type questEngine struct {
@@ -32,14 +34,17 @@ type questEngine struct {
 
 	activeQuests map[tgbotbase.UserID]activeUserQuest
 	mutex        sync.Mutex
+
+	resultMonitor ResultMonitor
 }
 
 var _ QuestEngine = &questEngine{}
 
-func NewQuestEngine(pool tgbotbase.RedisPool) QuestEngine {
+func NewQuestEngine(pool tgbotbase.RedisPool, resmon ResultMonitor) QuestEngine {
 	engine := &questEngine{
-		quests:       make(map[string]Quest, 0),
-		activeQuests: make(map[tgbotbase.UserID]activeUserQuest, 0)}
+		quests:        make(map[string]Quest, 0),
+		activeQuests:  make(map[tgbotbase.UserID]activeUserQuest, 0),
+		resultMonitor: resmon}
 	storage := NewRedisQuestStorage(pool)
 	quests, err := storage.LoadAll()
 	if err != nil {
@@ -62,8 +67,10 @@ func (q *questEngine) StartQuest(userID tgbotbase.UserID, questID string) error 
 	}
 
 	q.activeQuests[userID] = activeUserQuest{
-		quest: quest,
-		state: quest.CreateInitialState()}
+		questID: questID,
+		quest:   quest,
+		state:   quest.CreateInitialState()}
+	q.resultMonitor.QuestStarted(questID, userID, time.Now())
 
 	return nil
 }
@@ -83,6 +90,7 @@ func (q *questEngine) CheckAnswer(userID tgbotbase.UserID, answer string) Answer
 	newState := questData.quest.CheckAnswer(answer, questData.state)
 	if newState == nil {
 		log.WithFields(log.Fields{"user": userID, "answer": answer}).Debug("Incorrect answer")
+		q.resultMonitor.QuestionAnsweredIncorrectly(questData.questID, userID, time.Now())
 		return AnswerResult{
 			Active:   true,
 			Correct:  false,
@@ -90,16 +98,19 @@ func (q *questEngine) CheckAnswer(userID tgbotbase.UserID, answer string) Answer
 	}
 
 	log.WithFields(log.Fields{"user": userID, "answer": answer}).Debug("Correct answer")
+	q.resultMonitor.QuestionAnsweredCorrectly(questData.questID, userID, time.Now())
 	finished := false
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 	if newState.IsFinished() {
 		finished = true
+		q.resultMonitor.QuestFinished(questData.questID, userID, time.Now())
 		delete(q.activeQuests, userID)
 	} else {
 		q.activeQuests[userID] = activeUserQuest{
-			quest: questData.quest,
-			state: *newState}
+			questID: questData.questID,
+			quest:   questData.quest,
+			state:   *newState}
 	}
 	return AnswerResult{Active: true, Correct: true, Finished: finished}
 

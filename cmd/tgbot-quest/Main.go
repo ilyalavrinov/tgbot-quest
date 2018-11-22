@@ -12,6 +12,9 @@ import (
 type config struct {
 	tgbotbase.Config
 	Redis tgbotbase.RedisConfig
+	Owner struct {
+		ID int
+	}
 }
 
 func readGcfg(filename string) config {
@@ -40,7 +43,8 @@ func main() {
 	rand.Seed(int64(time.Now().Second()))
 
 	pool := tgbotbase.NewRedisPool(cfg.Redis)
-	engine := quest.NewQuestEngine(pool)
+	resmon := quest.NewTGResultMonitor(tgbot, []tgbotbase.UserID{tgbotbase.UserID(cfg.Owner.ID)})
+	engine := quest.NewQuestEngine(pool, resmon)
 
 	tgbot.AddHandler(tgbotbase.NewIncomingMessageDealer(NewStartHandler(engine)))
 	tgbot.AddHandler(tgbotbase.NewIncomingMessageDealer(NewAnswerHandler(engine)))

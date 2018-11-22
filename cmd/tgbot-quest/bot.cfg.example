@@ -9,3 +9,6 @@ pass = ilyalavrinov
 [redis]
 server = localhost:6379
 pass = thisismypassw0rd
+
+[owner]
+id = 12345
