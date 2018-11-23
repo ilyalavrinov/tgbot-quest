@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/gcfg.v1"
 	"math/rand"
+	"sync"
 	"time"
 )
 
@@ -42,12 +43,15 @@ func main() {
 
 	rand.Seed(int64(time.Now().Second()))
 
+	var usernames sync.Map
+
 	pool := tgbotbase.NewRedisPool(cfg.Redis)
-	resmon := quest.NewTGResultMonitor(tgbot, []tgbotbase.UserID{tgbotbase.UserID(cfg.Owner.ID)})
+	resmon := quest.NewTGResultMonitor(tgbot, []tgbotbase.UserID{tgbotbase.UserID(cfg.Owner.ID)}, &usernames)
 	engine := quest.NewQuestEngine(pool, resmon)
 
-	tgbot.AddHandler(tgbotbase.NewIncomingMessageDealer(NewStartHandler(engine)))
+	tgbot.AddHandler(tgbotbase.NewIncomingMessageDealer(NewStartHandler(engine, &usernames)))
 	tgbot.AddHandler(tgbotbase.NewIncomingMessageDealer(NewAnswerHandler(engine)))
+	tgbot.AddHandler(tgbotbase.NewIncomingMessageDealer(newStatsHandler(resmon)))
 
 	tgbot.Start()
 

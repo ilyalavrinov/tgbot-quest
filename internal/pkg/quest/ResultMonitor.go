@@ -5,6 +5,9 @@ import (
 	"github.com/admirallarimda/tgbotbase"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/telegram-bot-api.v4"
+	"sort"
+	"strconv"
+	"sync"
 	"time"
 )
 
@@ -13,6 +16,9 @@ type ResultMonitor interface {
 	QuestFinished(questID string, userID tgbotbase.UserID, t time.Time)
 	QuestionAnsweredCorrectly(questID string, userID tgbotbase.UserID, t time.Time)
 	QuestionAnsweredIncorrectly(questID string, userID tgbotbase.UserID, t time.Time)
+
+	// TODO: remove this piece of code somewhere else - it is not the correct place for this code
+	SendStats(questID string)
 }
 
 type questEvent struct {
@@ -33,14 +39,16 @@ type tgOwnerNotifyResultMonitor struct {
 	finishedCh          chan questEvent
 	answeredCorrectCh   chan questEvent
 	answeredIncorrectCh chan questEvent
+	sendStatsCh         chan string
 
-	stats map[string]map[tgbotbase.UserID]questStats // questID -> userID -> stats
+	stats map[string]map[tgbotbase.UserID]questStats
 
-	tgbot  *tgbotbase.Bot
-	owners []tgbotbase.UserID
+	tgbot     *tgbotbase.Bot
+	owners    []tgbotbase.UserID
+	usernames *sync.Map
 }
 
-func NewTGResultMonitor(tgbot *tgbotbase.Bot, owners []tgbotbase.UserID) ResultMonitor {
+func NewTGResultMonitor(tgbot *tgbotbase.Bot, owners []tgbotbase.UserID, usernames *sync.Map) ResultMonitor {
 	if len(owners) == 0 {
 		log.Panic("0 owners")
 	}
@@ -50,9 +58,11 @@ func NewTGResultMonitor(tgbot *tgbotbase.Bot, owners []tgbotbase.UserID) ResultM
 		finishedCh:          make(chan questEvent, 0),
 		answeredCorrectCh:   make(chan questEvent, 0),
 		answeredIncorrectCh: make(chan questEvent, 0),
+		sendStatsCh:         make(chan string, 0),
 		stats:               make(map[string]map[tgbotbase.UserID]questStats, 0),
 		tgbot:               tgbot,
-		owners:              owners}
+		owners:              owners,
+		usernames:           usernames}
 
 	go mon.run()
 	return mon
@@ -72,6 +82,10 @@ func (mon *tgOwnerNotifyResultMonitor) QuestionAnsweredCorrectly(questID string,
 
 func (mon *tgOwnerNotifyResultMonitor) QuestionAnsweredIncorrectly(questID string, userID tgbotbase.UserID, t time.Time) {
 	mon.answeredIncorrectCh <- questEvent{questID, userID, t}
+}
+
+func (mon *tgOwnerNotifyResultMonitor) SendStats(questID string) {
+	mon.sendStatsCh <- questID
 }
 
 func (mon *tgOwnerNotifyResultMonitor) run() {
@@ -104,6 +118,8 @@ func (mon *tgOwnerNotifyResultMonitor) run() {
 			stats.incorrectAnswers++
 			mon.stats[e.questID][e.userID] = stats
 			log.WithFields(log.Fields{"quest": e.questID, "user": e.userID, "time": e.t, "total_incorrect": stats.incorrectAnswers}).Debug("User answered incorrectly")
+		case questID := <-mon.sendStatsCh:
+			mon.sendStats(questID)
 		}
 	}
 }
@@ -118,4 +134,69 @@ func (mon *tgOwnerNotifyResultMonitor) ensureStats(questID string) {
 	if _, found := mon.stats[questID]; !found {
 		mon.stats[questID] = make(map[tgbotbase.UserID]questStats, 0)
 	}
+}
+
+func (mon *tgOwnerNotifyResultMonitor) sendStats(questID string) {
+	data, found := mon.stats[questID]
+	if !found {
+		mon.send(fmt.Sprintf("Quest '%s' not found for stats", questID))
+		return
+	}
+
+	type timeRecord struct {
+		userID tgbotbase.UserID
+		t      time.Time
+	}
+
+	type tdiffRecord struct {
+		userID tgbotbase.UserID
+		tdiff  time.Duration
+	}
+
+	orderedStartTimes := make([]timeRecord, 0, len(data))
+	orderedFinishTimes := make([]timeRecord, 0, len(data))
+	orderedTdiffs := make([]tdiffRecord, 0, len(data))
+	for u, dat := range data {
+		orderedStartTimes = append(orderedStartTimes, timeRecord{u, dat.started})
+		orderedFinishTimes = append(orderedFinishTimes, timeRecord{u, dat.finished})
+		orderedTdiffs = append(orderedTdiffs, tdiffRecord{u, dat.finished.Sub(dat.started)})
+	}
+	sort.Slice(orderedStartTimes, func(i int, j int) bool {
+		return orderedStartTimes[i].t.Before(orderedStartTimes[j].t)
+	})
+	sort.Slice(orderedFinishTimes, func(i int, j int) bool {
+		return orderedFinishTimes[i].t.Before(orderedFinishTimes[j].t)
+	})
+	sort.Slice(orderedTdiffs, func(i int, j int) bool {
+		return orderedTdiffs[i].tdiff.Nanoseconds() < orderedTdiffs[j].tdiff.Nanoseconds()
+	})
+
+	msg := fmt.Sprintf("Ordered start times for quest '%s'", questID)
+	for _, rec := range orderedStartTimes {
+		msg = fmt.Sprintf("%s\n User '%s' -> time %s", msg, mon.username(rec.userID), rec.t)
+	}
+	msg = msg + "\n\n"
+	mon.send(msg)
+
+	msg = fmt.Sprintf("Ordered finish times for quest '%s'", questID)
+	for _, rec := range orderedFinishTimes {
+		msg = fmt.Sprintf("%s\n User '%s' -> time %s", msg, mon.username(rec.userID), rec.t)
+	}
+	msg = msg + "\n\n"
+	mon.send(msg)
+
+	msg = fmt.Sprintf("Ordered time diffs for quest '%s'", questID)
+	for _, rec := range orderedTdiffs {
+		msg = fmt.Sprintf("%s\n User '%s' -> time %s", msg, mon.username(rec.userID), rec.tdiff)
+	}
+	msg = msg + "\n\n"
+	mon.send(msg)
+}
+
+func (mon *tgOwnerNotifyResultMonitor) username(userID tgbotbase.UserID) string {
+	val, found := mon.usernames.Load(int(userID))
+	if !found {
+		return strconv.Itoa(int(userID))
+	}
+	return val.(string)
 }
